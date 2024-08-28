@@ -5,14 +5,17 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 tz = ZoneInfo("Europe/Berlin")
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def get_db_connection():
     return psycopg2.connect(
-        host=os.getenv("POSTGRES_HOST", "postgres"),
-        database=os.getenv("POSTGRES_DB", "course_assistant"),
-        user=os.getenv("POSTGRES_USER", "your_username"),
-        password=os.getenv("POSTGRES_PASSWORD", "your_password"),
+        host=os.getenv("POSTGRES_HOST"),
+        database=os.getenv("POSTGRES_DB"),
+        user=os.getenv("POSTGRES_USER"),
+        password=os.getenv("POSTGRES_PASSWORD"),
     )
 
 
@@ -23,7 +26,8 @@ def init_db():
             cur.execute("DROP TABLE IF EXISTS feedback")
             cur.execute("DROP TABLE IF EXISTS conversations")
 
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE conversations (
                     id TEXT PRIMARY KEY,
                     question TEXT NOT NULL,
@@ -42,15 +46,18 @@ def init_db():
                     openai_cost FLOAT NOT NULL,
                     timestamp TIMESTAMP WITH TIME ZONE NOT NULL
                 )
-            """)
-            cur.execute("""
+            """
+            )
+            cur.execute(
+                """
                 CREATE TABLE feedback (
                     id SERIAL PRIMARY KEY,
                     conversation_id TEXT REFERENCES conversations(id),
                     feedback INTEGER NOT NULL,
                     timestamp TIMESTAMP WITH TIME ZONE NOT NULL
                 )
-            """)
+            """
+            )
         conn.commit()
     finally:
         conn.close()
@@ -59,7 +66,7 @@ def init_db():
 def save_conversation(conversation_id, question, answer_data, course, timestamp=None):
     if timestamp is None:
         timestamp = datetime.now(tz)
-    
+
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
@@ -134,12 +141,14 @@ def get_feedback_stats():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT 
                     SUM(CASE WHEN feedback > 0 THEN 1 ELSE 0 END) as thumbs_up,
                     SUM(CASE WHEN feedback < 0 THEN 1 ELSE 0 END) as thumbs_down
                 FROM feedback
-            """)
+            """
+            )
             return cur.fetchone()
     finally:
         conn.close()
